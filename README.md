@@ -26,7 +26,7 @@ nucleo.match('some');
 
 ## Benchmarks
 
-This repository contains a benchmark script, testing `nucleo-matcher-wasm` against some popular fuzzy finder libraries for NodeJS. Run `pnpm bench` to see the results for your computer.
+This repository contains a benchmark script, testing `nucleo-matcher-wasm` against some popular fuzzy finder libraries for NodeJS. Run `npm run bench` to see the results for your computer.
 
 ## Development
 
