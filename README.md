@@ -13,6 +13,8 @@ npm i nucleo-matcher-wasm
 ## Usage
 
 ```typescript
+import { NucleoMatcher } from 'nucleo-matcher-wasm';
+
 const nucleo = new NucleoMatcher([
     'some/path',
     'some/other/path',
