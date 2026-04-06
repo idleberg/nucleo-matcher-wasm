@@ -2,6 +2,9 @@ name: Run Benchmarks
 
 on:
   push:
+    paths:
+      - ".github/workflows/benchmark.yml"
+      - "benchmark/**"
 
 permissions:
   contents: read
