@@ -1,7 +1,7 @@
 # nucleo-matcher-wasm
 
 [![License](https://img.shields.io/github/license/idleberg/nucleo-matcher-wasm?style=for-the-badge)](LICENSE)
-[![Version](https://img.shields.io/npm/v/makensis?style=for-the-badge)](https://www.npmjs.org/package/makensis)
+[![Version](https://img.shields.io/npm/v/nucleo-matcher-wasm?style=for-the-badge)](https://www.npmjs.org/package/nucleo-matcher-wasm)
 [![Benchmarks](https://img.shields.io/github/actions/workflow/status/idleberg/nucleo-matcher-wasm/benchmark.yml?logo=nodedotjs&logoColor=white&style=for-the-badge)](https://github.com/idleberg/nucleo-matcher-wasm/actions/workflows/benchmark.yml)
 
 Fast fuzzy finder, powered by [`nucleo-matcher`](https://crates.io/crates/nucleo-matcher) compiled to WebAssembly.
