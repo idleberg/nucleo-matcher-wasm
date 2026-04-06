@@ -22,6 +22,10 @@ const nucleo = new NucleoMatcher([
 nucleo.match('some');
 ```
 
+## Benchmarks
+
+This repository contains a benchmark script, testing `nucleo-matcher-wasm` against some popular fuzzy finder libraries for NodeJS. Run `pnpm bench` to see the results for your computer.
+
 ## Development
 
 ### Prerequisites
@@ -53,10 +57,6 @@ Build the WASM package targeting Node.js:
 ```sh
 wasm-pack build --target nodejs --out-dir dist
 ```
-
-## Benchmarks
-
-This repository contains a script benchmark, testing `nucleo-matcher-wasm` against some popular fuzzy finder libraries for NodeJS. Run `pnpm bench` to see the results for your computer.
 
 ## License
 
