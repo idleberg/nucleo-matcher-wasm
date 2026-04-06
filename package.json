@@ -1,0 +1,37 @@
+{
+  "name": "nucleo-matcher-wasm",
+  "version": "0.0.0",
+  "description": "Fast fuzzy finder, powered by nucleo-matcher compiled to WebAssembly",
+  "author": "Jan T. Sott",
+  "license": "MPL-2.0",
+  "keywords": [
+    "fuzzy matching",
+    "fuzzy search",
+    "fuzzy finder",
+    "fzf",
+    "skim",
+    "nucleo-matcher"
+  ],
+  "type": "module",
+  "files": [
+    "dist/nucleo_wasm_bg.js",
+    "dist/nucleo_wasm_bg.wasm",
+    "dist/nucleo_wasm_bg.wasm.d.ts",
+    "dist/nucleo_wasm.d.ts",
+    "dist/nucleo_wasm.js"
+  ],
+  "main": "dist/nucleo_wasm.js",
+  "types": "dist/nucleo_wasm.d.ts",
+  "sideEffects": [
+    "./dist/nucleo_wasm.js"
+  ],
+  "scripts": {
+    "build": "npm run clean && wasm-pack build --no-pack --out-dir dist --release",
+    "clean": "node -e \"require('fs').rmSync('./dist', { recursive: true, force: true, maxRetries: process.platform === 'win32' ? 10 : 0 })\"",
+    "bench": "cd benchmark && pnpm install && node index.ts",
+    "prepack": "npm run build",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "devDependencies": {
+  }
+}
