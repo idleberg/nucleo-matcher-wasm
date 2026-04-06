@@ -1,5 +1,9 @@
 # nucleo-matcher-wasm
 
+[![License](https://img.shields.io/github/license/idleberg/nucleo-matcher-wasm?style=for-the-badge)](LICENSE)
+[![Version](https://img.shields.io/npm/v/makensis?style=for-the-badge)](https://www.npmjs.org/package/makensis)
+[![Benchmarks](https://img.shields.io/github/actions/workflow/status/idleberg/nucleo-matcher-wasm/benchmark.yml?logo=nodedotjs&logoColor=white&style=for-the-badge)](https://github.com/idleberg/nucleo-matcher-wasm/actions/workflows/benchmark.yml)
+
 Fast fuzzy finder, powered by [`nucleo-matcher`](https://crates.io/crates/nucleo-matcher) compiled to WebAssembly.
 
 > `nucleo` is a highly performant fuzzy matcher written in rust. It aims to fill the same use case as `fzf` and `skim`. Compared to `fzf`, `nucleo` has a significantly faster matching algorithm (see [benchmarks](https://crates.io/crates/nucleo-matcher#benchmarks)).
