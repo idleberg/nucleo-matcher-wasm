@@ -28,7 +28,7 @@
   "scripts": {
     "build": "npm run clean && wasm-pack build --no-pack --out-dir dist --release",
     "clean": "node -e \"require('fs').rmSync('./dist', { recursive: true, force: true, maxRetries: process.platform === 'win32' ? 10 : 0 })\"",
-    "bench": "cd benchmark && pnpm install && node index.ts",
+    "bench": "cd benchmark && npm install && node index.ts",
     "prepack": "npm run build",
     "test": "echo \"Error: no test specified\" && exit 0"
   },
