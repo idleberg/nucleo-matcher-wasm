@@ -46,7 +46,7 @@ curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 
 #### wasm-pack
 
-[wasm-pack](https://rustwasm.github.io/wasm-pack/) compiles the Rust crate to WebAssembly and generates JS/TS bindings.
+[wasm-pack](https://wasm-bindgen.github.io/wasm-pack/) compiles the Rust crate to WebAssembly and generates JS/TS bindings.
 
 ```sh
 cargo install wasm-pack
