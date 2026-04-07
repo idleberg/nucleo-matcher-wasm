@@ -6,7 +6,7 @@
 
 Fast fuzzy finder, powered by [`nucleo-matcher`](https://crates.io/crates/nucleo-matcher) compiled to WebAssembly.
 
-> `nucleo` is a highly performant fuzzy matcher written in rust. It aims to fill the same use case as `fzf` and `skim`. Compared to `fzf`, `nucleo` has a significantly faster matching algorithm.
+> `nucleo` is a highly performant fuzzy matcher written in rust. It aims to fill the same use case as `fzf` and `skim`. Compared to `fzf`, `nucleo` has a significantly faster matching algorithm. It is used in the [helix-editor](https://github.com/helix-editor/helix) and therefore has a large user base with lots of real world testing. The core matcher implementation is considered complete and is unlikely to see major changes
 
 ## Installation
 
