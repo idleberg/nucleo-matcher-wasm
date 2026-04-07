@@ -19,7 +19,11 @@ npm i nucleo-matcher-wasm
 ```typescript
 import { NucleoMatcher } from 'nucleo-matcher-wasm';
 
-const items = ['src/components/Header.tsx', 'src/utils/helpers.ts', 'test/fixtures/data.json'];
+const items = [
+    'src/components/Header.tsx',
+    'src/utils/helpers.ts',
+    'test/fixtures/data.json',
+];
 
 // Basic usage (defaults: case-insensitive, smart normalization)
 const nucleo = new NucleoMatcher(items);
