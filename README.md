@@ -19,13 +19,71 @@ npm i nucleo-matcher-wasm
 ```typescript
 import { NucleoMatcher } from 'nucleo-matcher-wasm';
 
-const nucleo = new NucleoMatcher([
-    'some/path',
-    'some/other/path',
-    'even/one/more'
-]);
+const items = ['src/components/Header.tsx', 'src/utils/helpers.ts', 'test/fixtures/data.json'];
 
-nucleo.match('some');
+// Basic usage (defaults: case-insensitive, smart normalization)
+const nucleo = new NucleoMatcher(items);
+
+// With options (file path matching, smart case)
+const nucleo = new NucleoMatcher(items, {
+    matchPaths: true,
+    caseMatching: 'smart',
+});
+```
+
+### API
+
+#### `matchPattern(pattern, options?)`
+
+Match with fzf-like syntax (`^` prefix, `$` postfix, `'` substring, `!` negation):
+
+```typescript
+nucleo.matchPattern('header');
+// → [['src/components/Header.tsx', 168]]
+
+nucleo.matchPattern('^src comp');
+// → [['src/components/Header.tsx', 168]]
+```
+
+#### `matchLiteral(pattern, kind?, options?)`
+
+Match literally (no special syntax parsing). `kind`: `"fuzzy"` (default), `"substring"`, `"prefix"`, `"postfix"`, `"exact"`:
+
+```typescript
+nucleo.matchLiteral('^src', 'fuzzy');
+// Treats ^ as a literal character
+
+nucleo.matchLiteral('test/', 'prefix');
+// → [['test/fixtures/data.json', ...]]
+```
+
+#### `matchPatternIndices(pattern, options?)` / `matchLiteralIndices(pattern, kind?, options?)`
+
+Same as above but also returns matched character indices (for highlighting):
+
+```typescript
+nucleo.matchPatternIndices('header');
+// → [['src/components/Header.tsx', 168, [15, 16, 17, 18, 19, 20]]]
+```
+
+#### `score(pattern, haystack, options?)`
+
+Score a single string without pre-loading items:
+
+```typescript
+nucleo.score('hlp', 'helpers.ts');
+// → 96
+
+nucleo.score('xyz', 'helpers.ts');
+// → undefined
+```
+
+### Options
+
+All matching methods accept an optional `options` parameter to override `caseMatching` and `normalization` for that call:
+
+```typescript
+nucleo.matchPattern('Header', { caseMatching: 'respect' });
 ```
 
 ## Benchmarks
