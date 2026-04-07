@@ -72,6 +72,12 @@ nucleo.matchPatternIndices('header');
 // → [['src/components/Header.tsx', 168, [15, 16, 17, 18, 19, 20]]]
 ```
 
+#### setItems
+
+Usage: `setItems(items)`
+
+Replace the stored item list.
+
 #### score
 
 Usage: `score(pattern, haystack, options?)`
@@ -93,6 +99,20 @@ All matching methods accept an optional `options` parameter to override `caseMat
 ```typescript
 nucleo.matchPattern('Header', { caseMatching: 'respect' });
 ```
+
+#### caseMatching
+
+Values: `"ignore" | "smart" | "respect"`  
+Default: `"ignore"`  
+
+Case sensitivity mode.
+
+#### normalization
+
+Values: `"smart" | "never"`  
+Default: `"smart"`  
+
+Unicode normalization mode
 
 ## Benchmarks
 
