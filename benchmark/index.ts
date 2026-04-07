@@ -77,8 +77,13 @@ for (const size of [100, 1_000, 10_000]) {
 
     // nucleo
     const nucleoStored = new NucleoMatcher(items);
-    results.push(bench("nucleo (WASM)", () => {
-      nucleoStored.match(pattern);
+    results.push(bench("nucleo (pattern)", () => {
+      nucleoStored.matchPattern(pattern);
+    }, iterations));
+
+    // nucleo matchLiteral
+    results.push(bench("nucleo (literal)", () => {
+      nucleoStored.matchLiteral(pattern);
     }, iterations));
 
     // fuzzaldrin
