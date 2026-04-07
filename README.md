@@ -144,6 +144,7 @@ This repository contains a benchmark script, testing `nucleo-matcher-wasm` again
 ======================================================================
 Dataset: 100 items, 500 iterations per matcher
 ======================================================================
+
 Averages across all patterns:
   nucleo (literal)        0.006 ms/iter
   fuzzy-search            0.009 ms/iter
