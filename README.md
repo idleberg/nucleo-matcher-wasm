@@ -94,11 +94,27 @@ nucleo.score('xyz', 'helpers.ts');
 
 ### Options
 
-All matching methods accept an optional `options` parameter to override `caseMatching` and `normalization` for that call:
+#### matchPaths
 
-```typescript
-nucleo.matchPattern('Header', { caseMatching: 'respect' });
-```
+> [!WARNING]
+>
+> This option can only be set in the constructor.
+
+Values: `boolean`  
+Default: `false`  
+
+Treat `/` and `\\` as word boundaries.
+
+#### preferPrefix
+
+> [!WARNING]
+>
+> This option can only be set in the constructor.
+
+Values: `boolean`  
+Default: `false`  
+
+Boost matches near the start of the haystack.
 
 #### caseMatching
 
