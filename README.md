@@ -138,7 +138,7 @@ Unicode normalization mode
 
 ## Benchmarks
 
-This repository contains a benchmark script, testing `nucleo-matcher-wasm` against some popular fuzzy finder libraries for NodeJS. Here's the gist of it on a M2 Pro:
+This repository contains a benchmark script, testing `nucleo-matcher-wasm` against some popular fuzzy finder libraries for NodeJS. Here's the gist of it on an Apple M2 Pro with 32GB of RAM:
 
 ```
 ======================================================================
