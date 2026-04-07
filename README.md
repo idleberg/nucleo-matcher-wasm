@@ -138,7 +138,61 @@ Unicode normalization mode
 
 ## Benchmarks
 
-This repository contains a benchmark script, testing `nucleo-matcher-wasm` against some popular fuzzy finder libraries for NodeJS. Run `npm run bench` to see the results for your computer.
+This repository contains a benchmark script, testing `nucleo-matcher-wasm` against some popular fuzzy finder libraries for NodeJS. Here's the gist of it on a M2 Pro:
+
+```
+======================================================================
+Dataset: 100 items, 500 iterations per matcher
+======================================================================
+Averages across all patterns:
+  nucleo (literal)        0.006 ms/iter
+  fuzzy-search            0.009 ms/iter
+  nucleo (pattern)        0.009 ms/iter
+  fzy.js                  0.016 ms/iter
+  fuzzaldrin-plus         0.018 ms/iter
+  fzi                     0.024 ms/iter
+  fuzzy                   0.030 ms/iter
+  fuzzaldrin              0.031 ms/iter
+  fzf                     0.046 ms/iter
+  fuse.js                 0.173 ms/iter
+  fast-fuzzy              0.511 ms/iter
+
+======================================================================
+Dataset: 1,000 items, 500 iterations per matcher
+======================================================================
+
+Averages across all patterns:
+  nucleo (literal)        0.050 ms/iter
+  nucleo (pattern)        0.051 ms/iter
+  fuzzy-search            0.089 ms/iter
+  fzy.js                  0.177 ms/iter
+  fuzzaldrin-plus         0.188 ms/iter
+  fzi                     0.265 ms/iter
+  fuzzaldrin              0.301 ms/iter
+  fuzzy                   0.332 ms/iter
+  fzf                     0.450 ms/iter
+  fast-fuzzy              0.570 ms/iter
+  fuse.js                 1.783 ms/iter
+
+======================================================================
+Dataset: 10,000 items, 50 iterations per matcher
+======================================================================
+
+Averages across all patterns:
+  nucleo (pattern)        0.508 ms/iter
+  nucleo (literal)        0.510 ms/iter
+  fuzzy-search            0.896 ms/iter
+  fzy.js                  1.867 ms/iter
+  fuzzaldrin-plus         1.968 ms/iter
+  fzi                     2.841 ms/iter
+  fuzzaldrin              3.014 ms/iter
+  fuzzy                   3.195 ms/iter
+  fast-fuzzy              4.446 ms/iter
+  fzf                     4.470 ms/iter
+  fuse.js                18.300 ms/iter
+```
+
+However, there's nothing like running a benchmark in your production environment. For the full benchmark, run`npm run bench`.
 
 ## Development
 
