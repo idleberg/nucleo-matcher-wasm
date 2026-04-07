@@ -5,6 +5,9 @@ on:
     paths:
       - ".github/workflows/benchmark.yml"
       - "benchmark/**"
+      - "src/**"
+      - "Cargo.lock"
+  workflow_dispatch:
 
 permissions:
   contents: read
