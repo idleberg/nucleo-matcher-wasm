@@ -94,6 +94,8 @@ nucleo.score('xyz', 'helpers.ts');
 
 ### Options
 
+Options can be set in the constructor and the provided matching methods.
+
 #### matchPaths
 
 > [!WARNING]
