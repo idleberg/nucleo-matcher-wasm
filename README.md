@@ -193,7 +193,7 @@ Averages across all patterns:
   fuse.js                18.300 ms/iter
 ```
 
-However, there's nothing like running a benchmark in your production environment. For the full benchmark, run`npm run bench`.
+However, there's nothing like running a benchmark in your production environment. For the full benchmark, try `npm run bench`.
 
 ## Development
 
