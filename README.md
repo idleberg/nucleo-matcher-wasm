@@ -33,7 +33,9 @@ const nucleo = new NucleoMatcher(items, {
 
 ### API
 
-#### `matchPattern(pattern, options?)`
+#### matchPattern
+
+Usage: `matchPattern(pattern, options?)`
 
 Match with fzf-like syntax (`^` prefix, `$` postfix, `'` substring, `!` negation):
 
@@ -45,7 +47,9 @@ nucleo.matchPattern('^src comp');
 // → [['src/components/Header.tsx', 168]]
 ```
 
-#### `matchLiteral(pattern, kind?, options?)`
+#### matchLiteral
+
+Usage:`matchLiteral(pattern, kind?, options?)`
 
 Match literally (no special syntax parsing). `kind`: `"fuzzy"` (default), `"substring"`, `"prefix"`, `"postfix"`, `"exact"`:
 
@@ -57,7 +61,9 @@ nucleo.matchLiteral('test/', 'prefix');
 // → [['test/fixtures/data.json', ...]]
 ```
 
-#### `matchPatternIndices(pattern, options?)` / `matchLiteralIndices(pattern, kind?, options?)`
+#### matchPatternIndices
+
+Usage: `matchPatternIndices(pattern, options?)` / `matchLiteralIndices(pattern, kind?, options?)`
 
 Same as above but also returns matched character indices (for highlighting):
 
@@ -66,7 +72,9 @@ nucleo.matchPatternIndices('header');
 // → [['src/components/Header.tsx', 168, [15, 16, 17, 18, 19, 20]]]
 ```
 
-#### `score(pattern, haystack, options?)`
+#### score
+
+Usage: `score(pattern, haystack, options?)`
 
 Score a single string without pre-loading items:
 
