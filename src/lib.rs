@@ -1,51 +1,104 @@
-use nucleo_matcher::pattern::{AtomKind, CaseMatching, Normalization, Pattern};
+use nucleo_matcher::pattern::Pattern;
 use nucleo_matcher::{Config, Matcher, Utf32Str};
+use serde::{Deserialize, Serialize};
+use tsify_next::Tsify;
 use wasm_bindgen::prelude::*;
 
-fn parse_case_matching(val: &JsValue) -> CaseMatching {
-    match val.as_string().as_deref() {
-        Some("smart") => CaseMatching::Smart,
-        Some("respect") => CaseMatching::Respect,
-        _ => CaseMatching::Ignore,
-    }
+#[derive(Tsify, Serialize, Deserialize, Default, Clone, Copy)]
+#[tsify(into_wasm_abi, from_wasm_abi)]
+#[serde(rename_all = "lowercase")]
+pub enum CaseMatching {
+    #[default]
+    Ignore,
+    Smart,
+    Respect,
 }
 
-fn parse_normalization(val: &JsValue) -> Normalization {
-    match val.as_string().as_deref() {
-        Some("never") => Normalization::Never,
-        _ => Normalization::Smart,
-    }
+#[derive(Tsify, Serialize, Deserialize, Default, Clone, Copy)]
+#[tsify(into_wasm_abi, from_wasm_abi)]
+#[serde(rename_all = "lowercase")]
+pub enum Normalization {
+    #[default]
+    Smart,
+    Never,
 }
 
-fn parse_atom_kind(kind: Option<String>) -> AtomKind {
-    match kind.as_deref() {
-        Some("substring") => AtomKind::Substring,
-        Some("prefix") => AtomKind::Prefix,
-        Some("postfix") => AtomKind::Postfix,
-        Some("exact") => AtomKind::Exact,
-        _ => AtomKind::Fuzzy,
-    }
+#[derive(Tsify, Serialize, Deserialize, Default, Clone, Copy)]
+#[tsify(into_wasm_abi, from_wasm_abi)]
+#[serde(rename_all = "lowercase")]
+pub enum AtomKind {
+    #[default]
+    Fuzzy,
+    Substring,
+    Prefix,
+    Postfix,
+    Exact,
 }
 
-fn resolve_case_matching(options: &JsValue, default: CaseMatching) -> CaseMatching {
-    if options.is_object() {
-        let val = js_sys::Reflect::get(options, &JsValue::from_str("caseMatching")).unwrap_or(JsValue::UNDEFINED);
-        if !val.is_undefined() {
-            return parse_case_matching(&val);
+impl From<CaseMatching> for nucleo_matcher::pattern::CaseMatching {
+    fn from(val: CaseMatching) -> Self {
+        match val {
+            CaseMatching::Ignore => Self::Ignore,
+            CaseMatching::Smart => Self::Smart,
+            CaseMatching::Respect => Self::Respect,
         }
     }
-    default
 }
 
-fn resolve_normalization(options: &JsValue, default: Normalization) -> Normalization {
-    if options.is_object() {
-        let val = js_sys::Reflect::get(options, &JsValue::from_str("normalization")).unwrap_or(JsValue::UNDEFINED);
-        if !val.is_undefined() {
-            return parse_normalization(&val);
+impl From<Normalization> for nucleo_matcher::pattern::Normalization {
+    fn from(val: Normalization) -> Self {
+        match val {
+            Normalization::Smart => Self::Smart,
+            Normalization::Never => Self::Never,
         }
     }
-    default
 }
+
+impl From<AtomKind> for nucleo_matcher::pattern::AtomKind {
+    fn from(val: AtomKind) -> Self {
+        match val {
+            AtomKind::Fuzzy => Self::Fuzzy,
+            AtomKind::Substring => Self::Substring,
+            AtomKind::Prefix => Self::Prefix,
+            AtomKind::Postfix => Self::Postfix,
+            AtomKind::Exact => Self::Exact,
+        }
+    }
+}
+
+#[derive(Tsify, Serialize, Deserialize, Default)]
+#[tsify(into_wasm_abi, from_wasm_abi)]
+#[serde(rename_all = "camelCase")]
+pub struct MatcherOptions {
+    /// Treat `/` and `\` as word boundaries (default: false)
+    #[serde(default)]
+    pub match_paths: bool,
+    /// Boost matches near the start of the haystack (default: false)
+    #[serde(default)]
+    pub prefer_prefix: bool,
+    /// Case sensitivity mode (default: "ignore")
+    #[serde(default)]
+    pub case_matching: CaseMatching,
+    /// Unicode normalization mode (default: "smart")
+    #[serde(default)]
+    pub normalization: Normalization,
+}
+
+#[derive(Tsify, Serialize, Deserialize, Default)]
+#[tsify(into_wasm_abi, from_wasm_abi)]
+#[serde(rename_all = "camelCase")]
+pub struct MatchOptions {
+    /// Case sensitivity mode – overrides the constructor default for this call
+    pub case_matching: Option<CaseMatching>,
+    /// Unicode normalization mode – overrides the constructor default for this call
+    pub normalization: Option<Normalization>,
+}
+
+#[wasm_bindgen(typescript_custom_section)]
+const TS_APPEND: &str = r#"
+export type MatchResult = [item: string, score: number];
+export type MatchResultWithIndices = [item: string, score: number, indices: number[]];
+"#;
 
 fn matches_to_js<S: AsRef<str>>(matches: Vec<(S, u32)>) -> JsValue {
     let result = js_sys::Array::new();
@@ -62,71 +115,44 @@ fn matches_to_js<S: AsRef<str>>(matches: Vec<(S, u32)>) -> JsValue {
 pub struct NucleoMatcher {
     matcher: Matcher,
     items: Vec<String>,
-    case_matching: CaseMatching,
-    normalization: Normalization,
+    case_matching: nucleo_matcher::pattern::CaseMatching,
+    normalization: nucleo_matcher::pattern::Normalization,
 }
 
 #[wasm_bindgen]
 impl NucleoMatcher {
     /// Create a new matcher with items and optional configuration.
-    ///
-    /// Options:
-    /// - `matchPaths` (boolean) — treat `/` and `\` as word boundaries (default: false)
-    /// - `preferPrefix` (boolean) — boost matches near the start (default: false)
-    /// - `caseMatching` ("ignore" | "smart" | "respect") — case sensitivity (default: "ignore")
-    /// - `normalization` ("smart" | "never") — unicode normalization (default: "smart")
     #[wasm_bindgen(constructor)]
-    pub fn new(items: Vec<JsValue>, options: JsValue) -> NucleoMatcher {
+    pub fn new(items: Vec<String>, options: Option<MatcherOptions>) -> NucleoMatcher {
+        let opts = options.unwrap_or_default();
+
         let mut config = Config::DEFAULT;
-        let mut case_matching = CaseMatching::Ignore;
-        let mut normalization = Normalization::Smart;
-
-        if options.is_object() {
-            if let Ok(val) = js_sys::Reflect::get(&options, &JsValue::from_str("matchPaths")) {
-                if val.as_bool() == Some(true) {
-                    config = config.match_paths();
-                }
-            }
-            if let Ok(val) = js_sys::Reflect::get(&options, &JsValue::from_str("preferPrefix")) {
-                if val.as_bool() == Some(true) {
-                    config.prefer_prefix = true;
-                }
-            }
-            if let Ok(val) = js_sys::Reflect::get(&options, &JsValue::from_str("caseMatching")) {
-                if !val.is_undefined() {
-                    case_matching = parse_case_matching(&val);
-                }
-            }
-            if let Ok(val) = js_sys::Reflect::get(&options, &JsValue::from_str("normalization")) {
-                if !val.is_undefined() {
-                    normalization = parse_normalization(&val);
-                }
-            }
+        if opts.match_paths {
+            config = config.match_paths();
         }
-
-        let stored_items: Vec<String> = items.iter().filter_map(|v| v.as_string()).collect();
+        if opts.prefer_prefix {
+            config.prefer_prefix = true;
+        }
 
         NucleoMatcher {
             matcher: Matcher::new(config),
-            items: stored_items,
-            case_matching,
-            normalization,
+            items,
+            case_matching: opts.case_matching.into(),
+            normalization: opts.normalization.into(),
         }
     }
 
     /// Replace the stored item list.
     #[wasm_bindgen(js_name = "setItems")]
-    pub fn set_items(&mut self, items: Vec<JsValue>) {
-        self.items = items.iter().filter_map(|v| v.as_string()).collect();
+    pub fn set_items(&mut self, items: Vec<String>) {
+        self.items = items;
     }
 
     /// Match a pattern (with fzf-like syntax: `^`, `$`, `'`, `!`) against stored items.
     /// Returns `[item, score]` pairs sorted by score.
-    /// Per-call `options` can override `caseMatching` and `normalization`.
     #[wasm_bindgen(js_name = "matchPattern")]
-    pub fn match_pattern(&mut self, pattern: &str, options: JsValue) -> JsValue {
-        let cm = resolve_case_matching(&options, self.case_matching);
-        let norm = resolve_normalization(&options, self.normalization);
+    pub fn match_pattern(&mut self, pattern: &str, options: Option<MatchOptions>) -> JsValue {
+        let (cm, norm) = self.resolve_options(&options);
         let str_refs: Vec<&str> = self.items.iter().map(|s| s.as_str()).collect();
         let matches = Pattern::parse(pattern, cm, norm).match_list(&str_refs, &mut self.matcher);
         matches_to_js(matches)
@@ -134,13 +160,10 @@ impl NucleoMatcher {
 
     /// Match a literal pattern against stored items using the specified matching kind.
     /// Special characters are treated literally (no fzf syntax parsing).
-    /// `kind`: "fuzzy" (default), "substring", "prefix", "postfix", "exact".
-    /// Returns `[item, score]` pairs sorted by score.
     #[wasm_bindgen(js_name = "matchLiteral")]
-    pub fn match_literal(&mut self, pattern: &str, kind: Option<String>, options: JsValue) -> JsValue {
-        let cm = resolve_case_matching(&options, self.case_matching);
-        let norm = resolve_normalization(&options, self.normalization);
-        let atom_kind = parse_atom_kind(kind);
+    pub fn match_literal(&mut self, pattern: &str, kind: Option<AtomKind>, options: Option<MatchOptions>) -> JsValue {
+        let (cm, norm) = self.resolve_options(&options);
+        let atom_kind: nucleo_matcher::pattern::AtomKind = kind.unwrap_or_default().into();
         let str_refs: Vec<&str> = self.items.iter().map(|s| s.as_str()).collect();
         let matches = Pattern::new(pattern, cm, norm, atom_kind).match_list(&str_refs, &mut self.matcher);
         matches_to_js(matches)
@@ -149,21 +172,17 @@ impl NucleoMatcher {
     /// Match a pattern (with fzf-like syntax) and return match indices for highlighting.
     /// Returns `[item, score, indices[]]` triples sorted by score.
     #[wasm_bindgen(js_name = "matchPatternIndices")]
-    pub fn match_pattern_indices(&mut self, pattern: &str, options: JsValue) -> JsValue {
-        let cm = resolve_case_matching(&options, self.case_matching);
-        let norm = resolve_normalization(&options, self.normalization);
+    pub fn match_pattern_indices(&mut self, pattern: &str, options: Option<MatchOptions>) -> JsValue {
+        let (cm, norm) = self.resolve_options(&options);
         let pat = Pattern::parse(pattern, cm, norm);
         self.match_with_indices(&pat)
     }
 
     /// Match a literal pattern and return match indices for highlighting.
-    /// `kind`: "fuzzy" (default), "substring", "prefix", "postfix", "exact".
-    /// Returns `[item, score, indices[]]` triples sorted by score.
     #[wasm_bindgen(js_name = "matchLiteralIndices")]
-    pub fn match_literal_indices(&mut self, pattern: &str, kind: Option<String>, options: JsValue) -> JsValue {
-        let cm = resolve_case_matching(&options, self.case_matching);
-        let norm = resolve_normalization(&options, self.normalization);
-        let atom_kind = parse_atom_kind(kind);
+    pub fn match_literal_indices(&mut self, pattern: &str, kind: Option<AtomKind>, options: Option<MatchOptions>) -> JsValue {
+        let (cm, norm) = self.resolve_options(&options);
+        let atom_kind: nucleo_matcher::pattern::AtomKind = kind.unwrap_or_default().into();
         let pat = Pattern::new(pattern, cm, norm, atom_kind);
         self.match_with_indices(&pat)
     }
@@ -171,9 +190,8 @@ impl NucleoMatcher {
     /// Score a single haystack string against a pattern (with fzf-like syntax).
     /// Returns the score as a number, or `undefined` if no match.
     #[wasm_bindgen]
-    pub fn score(&mut self, pattern: &str, haystack: &str, options: JsValue) -> JsValue {
-        let cm = resolve_case_matching(&options, self.case_matching);
-        let norm = resolve_normalization(&options, self.normalization);
+    pub fn score(&mut self, pattern: &str, haystack: &str, options: Option<MatchOptions>) -> JsValue {
+        let (cm, norm) = self.resolve_options(&options);
         let pat = Pattern::parse(pattern, cm, norm);
         let mut buf = Vec::new();
         let haystack_utf32 = Utf32Str::new(haystack, &mut buf);
@@ -185,6 +203,26 @@ impl NucleoMatcher {
 }
 
 impl NucleoMatcher {
+    fn resolve_options(
+        &self,
+        options: &Option<MatchOptions>,
+    ) -> (
+        nucleo_matcher::pattern::CaseMatching,
+        nucleo_matcher::pattern::Normalization,
+    ) {
+        let cm = options
+            .as_ref()
+            .and_then(|o| o.case_matching)
+            .map(Into::into)
+            .unwrap_or(self.case_matching);
+        let norm = options
+            .as_ref()
+            .and_then(|o| o.normalization)
+            .map(Into::into)
+            .unwrap_or(self.normalization);
+        (cm, norm)
+    }
+
     fn match_with_indices(&mut self, pat: &Pattern) -> JsValue {
         let mut scored: Vec<(&str, u32, Vec<u32>)> = Vec::new();
         let mut indices = Vec::new();
