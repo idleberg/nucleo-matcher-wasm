@@ -3,10 +3,11 @@ name: Run Tests
 on:
   push:
     paths:
-      - ".github/workflows/benchmark.yml"
-      - "benchmark/**"
+      - ".github/workflows/test.yml"
       - "src/**"
+      - "tests/**"
       - "Cargo.lock"
+      - "pnpm-lock.yaml"
   workflow_dispatch:
 
 permissions:
