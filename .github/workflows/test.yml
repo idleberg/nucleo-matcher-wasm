@@ -1,0 +1,40 @@
+name: Run Tests
+
+on:
+  push:
+    paths:
+      - ".github/workflows/benchmark.yml"
+      - "benchmark/**"
+      - "src/**"
+      - "Cargo.lock"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install wasm-pack
+        run: cargo install wasm-pack
+
+      - name: Build WASM package
+        run: wasm-pack build --no-pack --out-dir dist --release
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v5.0.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
+        with:
+          node-version: "latest"
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Run tests
+        run: npm run test
