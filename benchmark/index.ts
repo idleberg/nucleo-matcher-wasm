@@ -1,4 +1,4 @@
-import { NucleoMatcher } from "../dist/nucleo_wasm.js";
+import { NucleoMatcher } from "../dist/esm/nucleo_wasm.js";
 import fuzzaldrin from "fuzzaldrin-plus";
 import fuzzaldrinOriginal from "fuzzaldrin";
 import Fuse from "fuse.js";
