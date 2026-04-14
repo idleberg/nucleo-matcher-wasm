@@ -37,7 +37,9 @@ jobs:
         run: cargo install wasm-pack
 
       - name: Build WASM package
-        run: wasm-pack build --no-pack --out-dir dist --release
+        run: |
+          wasm-pack build --no-pack --out-dir dist/esm --release
+          wasm-pack build --no-pack --out-dir dist/cjs --target nodejs --release
 
       - name: Install pnpm
         uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v5.0.0
