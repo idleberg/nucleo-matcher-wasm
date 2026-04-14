@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from 'vitest'
-import { NucleoMatcher } from '../dist/nucleo_wasm.js'
+import { NucleoMatcher } from '../dist/esm/nucleo_wasm.js'
 
 const FRUITS = ['apple', 'apricot', 'banana', 'blueberry', 'cherry', 'grape', 'grapefruit']
 const PATHS = ['src/components/Button.tsx', 'src/utils/helpers.ts', 'tests/index.test.ts']
