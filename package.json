@@ -14,8 +14,9 @@
   ],
   "type": "module",
   "files": [
+    "dist/**/*.d.ts",
     "dist/**/*.js",
-    "dist/**/*.d.ts"
+    "dist/**/*.wasm"
   ],
   "main": "dist/cjs/nucleo_wasm.js",
   "types": "dist/esm/nucleo_wasm.d.ts",
