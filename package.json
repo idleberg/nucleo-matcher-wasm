@@ -14,37 +14,31 @@
   ],
   "type": "module",
   "files": [
-    "dist/**/*.d.ts",
-    "dist/**/*.js",
-    "dist/**/*.wasm"
+    "dist"
   ],
-  "main": "dist/cjs/nucleo_wasm.js",
-  "types": "dist/esm/nucleo_wasm.d.ts",
+  "main": "dist/nucleo_wasm.cjs",
+  "types": "dist/nucleo_wasm.d.ts",
   "exports": {
     ".": {
-      "require": "./dist/cjs/nucleo_wasm.js",
-      "import": "./dist/esm/nucleo_wasm.js",
-      "types": "./dist/esm/nucleo_wasm.d.ts"
+      "require": "./dist/nucleo_wasm.cjs",
+      "import": "./dist/nucleo_wasm.mjs",
+      "types": "./dist/nucleo_wasm.d.ts"
     }
   },
   "sideEffects": [
-    "./dist/esm/nucleo_wasm.js",
-    "./dist/cjs/nucleo_wasm.js"
+    "./dist/nucleo_wasm.mjs",
+    "./dist/nucleo_wasm.cjs"
   ],
   "scripts": {
-    "build": "concurrently \"npm run build:esm\" \"npm run build:cjs\"",
-    "build:esm": "wasm-pack build --no-pack --out-dir dist/esm --release",
-    "build:cjs": "wasm-pack build --no-pack --out-dir dist/cjs --target nodejs --release",
-    "clean": "node -e \"require('fs').rmSync('./dist', { recursive: true, force: true, maxRetries: process.platform === 'win32' ? 10 : 0 })\"",
+    "build": "node scripts/build.ts",
     "bench": "cd benchmark && pnpm install && node index.ts",
-    "prebuild": "npm run clean",
     "prepack": "npm run build",
     "test": "vitest run"
   },
   "devDependencies": {
-    "concurrently": "^9.2.1",
     "vite-plugin-wasm": "^3.0.0",
-    "vitest": "^4.1.4"
+    "vitest": "^4.1.4",
+    "zx": "8.8.5-lite"
   },
   "packageManager": "pnpm@10.33.0+sha512.10568bb4a6afb58c9eb3630da90cc9516417abebd3fabbe6739f0ae795728da1491e9db5a544c76ad8eb7570f5c4bb3d6c637b2cb41bfdcdb47fa823c8649319"
 }
