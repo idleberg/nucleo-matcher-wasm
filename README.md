@@ -20,7 +20,7 @@ npm i nucleo-matcher-wasm
 import { NucleoMatcher } from 'nucleo-matcher-wasm';
 
 const items = [
-    'src/components/Header.tsx',
+    'src/components/Header.svelte',
     'src/utils/helpers.ts',
     'test/fixtures/data.json',
 ];
@@ -45,10 +45,10 @@ Match with fzf-like syntax (`^` prefix, `$` postfix, `'` substring, `!` negation
 
 ```typescript
 nucleo.matchPattern('header');
-// → [['src/components/Header.tsx', 168]]
+// → [['src/components/Header.svelte', 168]]
 
 nucleo.matchPattern('^src comp');
-// → [['src/components/Header.tsx', 168]]
+// → [['src/components/Header.svelte', 168]]
 ```
 
 #### matchLiteral
@@ -73,7 +73,7 @@ Same as above but also returns matched character indices (for highlighting):
 
 ```typescript
 nucleo.matchPatternIndices('header');
-// → [['src/components/Header.tsx', 168, [15, 16, 17, 18, 19, 20]]]
+// → [['src/components/Header.svelte', 168, [15, 16, 17, 18, 19, 20]]]
 ```
 
 #### setItems
