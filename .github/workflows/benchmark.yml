@@ -50,4 +50,6 @@ jobs:
           registry-url: "https://registry.npmjs.org"
 
       - name: Run benchmarks
-        run: npm run bench
+        run: |
+          pnpm run build
+          pnpm run bench
