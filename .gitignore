@@ -1,2 +1,10 @@
+# build artifacts
+.build
+dist/
 /target/
+
+# package manager
 node_modules/
+bun.lock
+package-lock.json
+yarn.lock
