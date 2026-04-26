@@ -136,6 +136,34 @@ Default: `"smart"`
 
 Unicode normalization mode
 
+#### matchPatternIndexed
+
+Usage: `matchPatternIndexed(pattern, options?)` / `matchLiteralIndexed(pattern, kind?, options?)`
+
+Returns parallel typed arrays of haystack indices and scores instead of `[item, score]` pairs. Useful when the haystack array is already held on the JavaScript side — avoids copying the matched strings back across the WebAssembly boundary.
+
+```typescript
+const { indices, scores } = nucleo.matchPatternIndexed('header');
+// indices: Uint32Array([0])
+// scores:  Uint32Array([168])
+const items = Array.from(indices, (i) => allItems[i]);
+```
+
+#### maxResults
+
+> [!NOTE]
+>
+> This option can only be set per-call (not in the constructor).
+
+Values: `number`  
+Default: unbounded  
+
+Cap the result set to the top N matches by score. Skips marshaling discarded results across the WebAssembly boundary, and uses a bounded heap internally rather than scoring + full-sorting all candidates.
+
+```typescript
+nucleo.matchPattern('hdr', { maxResults: 50 });
+```
+
 ## Benchmarks
 
 This repository contains a benchmark script, testing `nucleo-matcher-wasm` against some popular fuzzy finder libraries for NodeJS. Here's the gist of it on an Apple M2 Pro with 32GB of RAM:
