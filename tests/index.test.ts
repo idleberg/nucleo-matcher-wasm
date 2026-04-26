@@ -411,4 +411,120 @@ describe('NucleoMatcher', () => {
       }).not.toThrow()
     })
   })
+
+  describe('maxResults option', () => {
+    let matcher: NucleoMatcher
+
+    beforeEach(() => {
+      matcher = new NucleoMatcher(FRUITS)
+    })
+
+    afterEach(() => {
+      matcher.free()
+    })
+
+    test('matchLiteral caps to top K in score-descending order', () => {
+      const k = 2
+      const capped = matcher.matchLiteral('ap', undefined, { maxResults: k }) as [string, number][]
+      expect(capped.length).toBe(k)
+      for (let i = 1; i < capped.length; i++) {
+        expect(capped[i - 1][1]).toBeGreaterThanOrEqual(capped[i][1])
+      }
+    })
+
+    test('matchLiteral top-K equals prefix of unbounded result', () => {
+      const full = matcher.matchLiteral('ap') as [string, number][]
+      const k = Math.min(2, full.length)
+      const capped = matcher.matchLiteral('ap', undefined, { maxResults: k }) as [string, number][]
+      const cappedScores = capped.map(([, s]) => s).sort((a, b) => b - a)
+      const fullTopScores = full.slice(0, k).map(([, s]) => s).sort((a, b) => b - a)
+      expect(cappedScores).toEqual(fullTopScores)
+    })
+
+    test('matchPattern caps to top K', () => {
+      const capped = matcher.matchPattern('ap', { maxResults: 1 }) as [string, number][]
+      expect(capped.length).toBe(1)
+    })
+
+    test('matchPatternIndices caps to top K', () => {
+      const capped = matcher.matchPatternIndices('ap', { maxResults: 2 }) as [string, number, number[]][]
+      expect(capped.length).toBe(2)
+      for (let i = 1; i < capped.length; i++) {
+        expect(capped[i - 1][1]).toBeGreaterThanOrEqual(capped[i][1])
+      }
+    })
+
+    test('matchLiteralIndices caps to top K', () => {
+      const capped = matcher.matchLiteralIndices('ap', undefined, { maxResults: 2 }) as [string, number, number[]][]
+      expect(capped.length).toBe(2)
+    })
+
+    test('maxResults: 0 returns empty array', () => {
+      const results = matcher.matchLiteral('ap', undefined, { maxResults: 0 }) as [string, number][]
+      expect(results).toEqual([])
+    })
+
+    test('maxResults greater than haystack returns full result', () => {
+      const full = matcher.matchLiteral('ap') as [string, number][]
+      const capped = matcher.matchLiteral('ap', undefined, { maxResults: 999 }) as [string, number][]
+      expect(capped.length).toBe(full.length)
+    })
+
+    test('empty pattern with maxResults returns first K items with score 0', () => {
+      const k = 3
+      const capped = matcher.matchPattern('', { maxResults: k }) as [string, number][]
+      expect(capped.length).toBe(k)
+      expect(capped.map(([item]) => item)).toEqual(FRUITS.slice(0, k))
+      expect(capped.every(([, s]) => s === 0)).toBe(true)
+    })
+  })
+
+  describe('indexed match methods', () => {
+    let matcher: NucleoMatcher
+
+    beforeEach(() => {
+      matcher = new NucleoMatcher(FRUITS)
+    })
+
+    afterEach(() => {
+      matcher.free()
+    })
+
+    test('matchPatternIndexed returns Uint32Array indices + scores', () => {
+      const result = matcher.matchPatternIndexed('ap') as { indices: Uint32Array; scores: Uint32Array }
+      expect(result.indices).toBeInstanceOf(Uint32Array)
+      expect(result.scores).toBeInstanceOf(Uint32Array)
+      expect(result.indices.length).toBe(result.scores.length)
+      expect(result.indices.length).toBeGreaterThan(0)
+    })
+
+    test('matchPatternIndexed indices map back to FRUITS items matching matchPattern', () => {
+      const indexed = matcher.matchPatternIndexed('ap') as { indices: Uint32Array; scores: Uint32Array }
+      const reference = matcher.matchPattern('ap') as [string, number][]
+      const indexedItems = Array.from(indexed.indices).map((i) => FRUITS[i])
+      const indexedScores = Array.from(indexed.scores)
+      expect(indexedItems).toEqual(reference.map(([item]) => item))
+      expect(indexedScores).toEqual(reference.map(([, s]) => s))
+    })
+
+    test('matchLiteralIndexed honors AtomKind', () => {
+      const result = matcher.matchLiteralIndexed('ap', 'prefix') as { indices: Uint32Array; scores: Uint32Array }
+      const items = Array.from(result.indices).map((i) => FRUITS[i])
+      expect(items).toContain('apple')
+      expect(items).toContain('apricot')
+      expect(items).not.toContain('grape')
+    })
+
+    test('matchPatternIndexed honors maxResults', () => {
+      const result = matcher.matchPatternIndexed('ap', { maxResults: 2 }) as { indices: Uint32Array; scores: Uint32Array }
+      expect(result.indices.length).toBe(2)
+      expect(result.scores.length).toBe(2)
+    })
+
+    test('matchLiteralIndexed returns empty typed arrays when nothing matches', () => {
+      const result = matcher.matchLiteralIndexed('zzz') as { indices: Uint32Array; scores: Uint32Array }
+      expect(result.indices.length).toBe(0)
+      expect(result.scores.length).toBe(0)
+    })
+  })
 })
