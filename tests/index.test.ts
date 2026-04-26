@@ -478,4 +478,53 @@ describe('NucleoMatcher', () => {
       expect(capped.every(([, s]) => s === 0)).toBe(true)
     })
   })
+
+  describe('indexed match methods', () => {
+    let matcher: NucleoMatcher
+
+    beforeEach(() => {
+      matcher = new NucleoMatcher(FRUITS)
+    })
+
+    afterEach(() => {
+      matcher.free()
+    })
+
+    test('matchPatternIndexed returns Uint32Array indices + scores', () => {
+      const result = matcher.matchPatternIndexed('ap') as { indices: Uint32Array; scores: Uint32Array }
+      expect(result.indices).toBeInstanceOf(Uint32Array)
+      expect(result.scores).toBeInstanceOf(Uint32Array)
+      expect(result.indices.length).toBe(result.scores.length)
+      expect(result.indices.length).toBeGreaterThan(0)
+    })
+
+    test('matchPatternIndexed indices map back to FRUITS items matching matchPattern', () => {
+      const indexed = matcher.matchPatternIndexed('ap') as { indices: Uint32Array; scores: Uint32Array }
+      const reference = matcher.matchPattern('ap') as [string, number][]
+      const indexedItems = Array.from(indexed.indices).map((i) => FRUITS[i])
+      const indexedScores = Array.from(indexed.scores)
+      expect(indexedItems).toEqual(reference.map(([item]) => item))
+      expect(indexedScores).toEqual(reference.map(([, s]) => s))
+    })
+
+    test('matchLiteralIndexed honors AtomKind', () => {
+      const result = matcher.matchLiteralIndexed('ap', 'prefix') as { indices: Uint32Array; scores: Uint32Array }
+      const items = Array.from(result.indices).map((i) => FRUITS[i])
+      expect(items).toContain('apple')
+      expect(items).toContain('apricot')
+      expect(items).not.toContain('grape')
+    })
+
+    test('matchPatternIndexed honors maxResults', () => {
+      const result = matcher.matchPatternIndexed('ap', { maxResults: 2 }) as { indices: Uint32Array; scores: Uint32Array }
+      expect(result.indices.length).toBe(2)
+      expect(result.scores.length).toBe(2)
+    })
+
+    test('matchLiteralIndexed returns empty typed arrays when nothing matches', () => {
+      const result = matcher.matchLiteralIndexed('zzz') as { indices: Uint32Array; scores: Uint32Array }
+      expect(result.indices.length).toBe(0)
+      expect(result.scores.length).toBe(0)
+    })
+  })
 })
