@@ -118,13 +118,10 @@ fn scored_to_js(items: &[String], scored: &[(usize, u32)]) -> JsValue {
 }
 
 fn scored_to_indexed_js(scored: &[(usize, u32)]) -> JsValue {
-    let n = scored.len();
-    let mut indices_buf: Vec<u32> = Vec::with_capacity(n);
-    let mut scores_buf: Vec<u32> = Vec::with_capacity(n);
-    for &(idx, score) in scored {
-        indices_buf.push(idx as u32);
-        scores_buf.push(score);
-    }
+    let (indices_buf, scores_buf): (Vec<u32>, Vec<u32>) = scored
+        .iter()
+        .map(|&(idx, score)| (idx as u32, score))
+        .unzip();
     let indices_arr = js_sys::Uint32Array::from(indices_buf.as_slice());
     let scores_arr = js_sys::Uint32Array::from(scores_buf.as_slice());
     let obj = js_sys::Object::new();
@@ -263,7 +260,8 @@ impl NucleoMatcher {
     #[wasm_bindgen]
     pub fn score(&mut self, pattern: &str, haystack: &str, options: Option<MatchOptions>) -> JsValue {
         let (cm, norm) = self.resolve_options(&options);
-        let pat = Pattern::parse(pattern, cm, norm);
+        self.ensure_pattern(pattern, cm, norm, None);
+        let pat = &self.cache.as_ref().unwrap().pattern;
         let mut buf = Vec::new();
         let haystack_utf32 = Utf32Str::new(haystack, &mut buf);
         match pat.score(haystack_utf32, &mut self.matcher) {
@@ -388,22 +386,40 @@ fn match_with_indices(
     matcher: &mut Matcher,
     max: Option<usize>,
 ) -> JsValue {
-    let mut scored: Vec<(usize, u32, Vec<u32>)> = Vec::new();
-    let mut indices = Vec::new();
-
-    for (i, haystack) in haystacks.iter().enumerate() {
-        indices.clear();
-        if let Some(score) = pat.indices(haystack.slice(..), matcher, &mut indices) {
-            indices.sort_unstable();
-            indices.dedup();
-            scored.push((i, score, std::mem::take(&mut indices)));
+    let scored: Vec<(usize, u32, Vec<u32>)> = match max {
+        Some(0) => Vec::new(),
+        Some(k) if k < haystacks.len() => {
+            // First pass: score-only top-K via the heap path in `score_all`.
+            // Second pass: gather indices for just the K winners.
+            let top = score_all(pat, haystacks, matcher, Some(k));
+            let mut indices: Vec<u32> = Vec::new();
+            top.into_iter()
+                .filter_map(|(i, _)| {
+                    indices.clear();
+                    pat.indices(haystacks[i].slice(..), matcher, &mut indices)
+                        .map(|score| {
+                            indices.sort_unstable();
+                            indices.dedup();
+                            (i, score, std::mem::take(&mut indices))
+                        })
+                })
+                .collect()
         }
-    }
-
-    scored.sort_by(|a, b| b.1.cmp(&a.1));
-    if let Some(k) = max {
-        scored.truncate(k);
-    }
+        _ => {
+            let mut acc: Vec<(usize, u32, Vec<u32>)> = Vec::new();
+            let mut indices: Vec<u32> = Vec::new();
+            for (i, haystack) in haystacks.iter().enumerate() {
+                indices.clear();
+                if let Some(score) = pat.indices(haystack.slice(..), matcher, &mut indices) {
+                    indices.sort_unstable();
+                    indices.dedup();
+                    acc.push((i, score, std::mem::take(&mut indices)));
+                }
+            }
+            acc.sort_by(|a, b| b.1.cmp(&a.1));
+            acc
+        }
+    };
 
     let result = js_sys::Array::new();
     for (idx, score, idxs) in scored {
