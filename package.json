@@ -16,13 +16,11 @@
   "files": [
     "dist"
   ],
-  "main": "dist/nucleo_wasm.cjs",
-  "types": "dist/nucleo_wasm.d.ts",
   "exports": {
     ".": {
+      "types": "./dist/nucleo_wasm.d.ts",
       "require": "./dist/nucleo_wasm.cjs",
-      "import": "./dist/nucleo_wasm.mjs",
-      "types": "./dist/nucleo_wasm.d.ts"
+      "import": "./dist/nucleo_wasm.mjs"
     }
   },
   "sideEffects": [
