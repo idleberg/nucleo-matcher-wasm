@@ -1,5 +1,5 @@
 use nucleo_matcher::pattern::Pattern;
-use nucleo_matcher::{Config, Matcher, Utf32Str};
+use nucleo_matcher::{Config, Matcher, Utf32Str, Utf32String};
 use serde::{Deserialize, Serialize};
 use tsify_next::Tsify;
 use wasm_bindgen::prelude::*;
@@ -100,11 +100,11 @@ export type MatchResult = [item: string, score: number];
 export type MatchResultWithIndices = [item: string, score: number, indices: number[]];
 "#;
 
-fn matches_to_js<S: AsRef<str>>(matches: Vec<(S, u32)>) -> JsValue {
+fn scored_to_js(items: &[String], scored: &[(usize, u32)]) -> JsValue {
     let result = js_sys::Array::new();
-    for (item, score) in matches {
+    for &(idx, score) in scored {
         let pair = js_sys::Array::new();
-        pair.push(&JsValue::from_str(item.as_ref()));
+        pair.push(&JsValue::from_str(&items[idx]));
         pair.push(&JsValue::from_f64(score as f64));
         result.push(&pair);
     }
@@ -115,6 +115,7 @@ fn matches_to_js<S: AsRef<str>>(matches: Vec<(S, u32)>) -> JsValue {
 pub struct NucleoMatcher {
     matcher: Matcher,
     items: Vec<String>,
+    haystacks: Vec<Utf32String>,
     case_matching: nucleo_matcher::pattern::CaseMatching,
     normalization: nucleo_matcher::pattern::Normalization,
 }
@@ -134,9 +135,12 @@ impl NucleoMatcher {
             config.prefer_prefix = true;
         }
 
+        let haystacks = items.iter().map(|s| Utf32String::from(s.as_str())).collect();
+
         NucleoMatcher {
             matcher: Matcher::new(config),
             items,
+            haystacks,
             case_matching: opts.case_matching.into(),
             normalization: opts.normalization.into(),
         }
@@ -145,6 +149,7 @@ impl NucleoMatcher {
     /// Replace the stored item list.
     #[wasm_bindgen(js_name = "setItems")]
     pub fn set_items(&mut self, items: Vec<String>) {
+        self.haystacks = items.iter().map(|s| Utf32String::from(s.as_str())).collect();
         self.items = items;
     }
 
@@ -153,9 +158,9 @@ impl NucleoMatcher {
     #[wasm_bindgen(js_name = "matchPattern")]
     pub fn match_pattern(&mut self, pattern: &str, options: Option<MatchOptions>) -> JsValue {
         let (cm, norm) = self.resolve_options(&options);
-        let str_refs: Vec<&str> = self.items.iter().map(|s| s.as_str()).collect();
-        let matches = Pattern::parse(pattern, cm, norm).match_list(&str_refs, &mut self.matcher);
-        matches_to_js(matches)
+        let pat = Pattern::parse(pattern, cm, norm);
+        let scored = self.score_all(&pat);
+        scored_to_js(&self.items, &scored)
     }
 
     /// Match a literal pattern against stored items using the specified matching kind.
@@ -164,9 +169,9 @@ impl NucleoMatcher {
     pub fn match_literal(&mut self, pattern: &str, kind: Option<AtomKind>, options: Option<MatchOptions>) -> JsValue {
         let (cm, norm) = self.resolve_options(&options);
         let atom_kind: nucleo_matcher::pattern::AtomKind = kind.unwrap_or_default().into();
-        let str_refs: Vec<&str> = self.items.iter().map(|s| s.as_str()).collect();
-        let matches = Pattern::new(pattern, cm, norm, atom_kind).match_list(&str_refs, &mut self.matcher);
-        matches_to_js(matches)
+        let pat = Pattern::new(pattern, cm, norm, atom_kind);
+        let scored = self.score_all(&pat);
+        scored_to_js(&self.items, &scored)
     }
 
     /// Match a pattern (with fzf-like syntax) and return match indices for highlighting.
@@ -223,31 +228,43 @@ impl NucleoMatcher {
         (cm, norm)
     }
 
-    fn match_with_indices(&mut self, pat: &Pattern) -> JsValue {
-        let mut scored: Vec<(&str, u32, Vec<u32>)> = Vec::new();
-        let mut indices = Vec::new();
-        let mut buf = Vec::new();
+    fn score_all(&mut self, pat: &Pattern) -> Vec<(usize, u32)> {
+        if pat.atoms.is_empty() {
+            return (0..self.items.len()).map(|i| (i, 0)).collect();
+        }
+        let mut scored: Vec<(usize, u32)> = self
+            .haystacks
+            .iter()
+            .enumerate()
+            .filter_map(|(i, h)| pat.score(h.slice(..), &mut self.matcher).map(|s| (i, s)))
+            .collect();
+        scored.sort_unstable_by(|a, b| b.1.cmp(&a.1));
+        scored
+    }
 
-        for item in &self.items {
+    fn match_with_indices(&mut self, pat: &Pattern) -> JsValue {
+        let mut scored: Vec<(usize, u32, Vec<u32>)> = Vec::new();
+        let mut indices = Vec::new();
+
+        for (i, haystack) in self.haystacks.iter().enumerate() {
             indices.clear();
-            let haystack = Utf32Str::new(item.as_str(), &mut buf);
-            if let Some(score) = pat.indices(haystack, &mut self.matcher, &mut indices) {
+            if let Some(score) = pat.indices(haystack.slice(..), &mut self.matcher, &mut indices) {
                 indices.sort_unstable();
                 indices.dedup();
-                scored.push((item.as_str(), score, indices.clone()));
+                scored.push((i, score, std::mem::take(&mut indices)));
             }
         }
 
         scored.sort_by(|a, b| b.1.cmp(&a.1));
 
         let result = js_sys::Array::new();
-        for (item, score, idxs) in scored {
+        for (idx, score, idxs) in scored {
             let triple = js_sys::Array::new();
-            triple.push(&JsValue::from_str(item));
+            triple.push(&JsValue::from_str(&self.items[idx]));
             triple.push(&JsValue::from_f64(score as f64));
             let js_indices = js_sys::Array::new();
-            for idx in idxs {
-                js_indices.push(&JsValue::from_f64(idx as f64));
+            for i in idxs {
+                js_indices.push(&JsValue::from_f64(i as f64));
             }
             triple.push(&js_indices);
             result.push(&triple);
