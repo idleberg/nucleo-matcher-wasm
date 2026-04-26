@@ -103,6 +103,7 @@ pub struct MatchOptions {
 const TS_APPEND: &str = r#"
 export type MatchResult = [item: string, score: number];
 export type MatchResultWithIndices = [item: string, score: number, indices: number[]];
+export type IndexedMatchResult = { indices: Uint32Array; scores: Uint32Array };
 "#;
 
 fn scored_to_js(items: &[String], scored: &[(usize, u32)]) -> JsValue {
@@ -114,6 +115,22 @@ fn scored_to_js(items: &[String], scored: &[(usize, u32)]) -> JsValue {
         result.push(&pair);
     }
     result.into()
+}
+
+fn scored_to_indexed_js(scored: &[(usize, u32)]) -> JsValue {
+    let n = scored.len();
+    let mut indices_buf: Vec<u32> = Vec::with_capacity(n);
+    let mut scores_buf: Vec<u32> = Vec::with_capacity(n);
+    for &(idx, score) in scored {
+        indices_buf.push(idx as u32);
+        scores_buf.push(score);
+    }
+    let indices_arr = js_sys::Uint32Array::from(indices_buf.as_slice());
+    let scores_arr = js_sys::Uint32Array::from(scores_buf.as_slice());
+    let obj = js_sys::Object::new();
+    js_sys::Reflect::set(&obj, &JsValue::from_str("indices"), &indices_arr).unwrap();
+    js_sys::Reflect::set(&obj, &JsValue::from_str("scores"), &scores_arr).unwrap();
+    obj.into()
 }
 
 struct PatternCache {
@@ -191,6 +208,32 @@ impl NucleoMatcher {
         let pat = &self.cache.as_ref().unwrap().pattern;
         let scored = score_all(pat, &self.haystacks, &mut self.matcher, max);
         scored_to_js(&self.items, &scored)
+    }
+
+    /// Match a pattern (with fzf-like syntax) and return parallel typed arrays of
+    /// haystack indices + scores. Skips copying matched strings across the WASM
+    /// boundary — the caller looks up `items[indices[i]]` on the JS side.
+    #[wasm_bindgen(js_name = "matchPatternIndexed")]
+    pub fn match_pattern_indexed(&mut self, pattern: &str, options: Option<MatchOptions>) -> JsValue {
+        let (cm, norm) = self.resolve_options(&options);
+        let max = max_results(&options);
+        self.ensure_pattern(pattern, cm, norm, None);
+        let pat = &self.cache.as_ref().unwrap().pattern;
+        let scored = score_all(pat, &self.haystacks, &mut self.matcher, max);
+        scored_to_indexed_js(&scored)
+    }
+
+    /// Match a literal pattern and return parallel typed arrays of haystack
+    /// indices + scores. See `matchPatternIndexed` for the marshaling rationale.
+    #[wasm_bindgen(js_name = "matchLiteralIndexed")]
+    pub fn match_literal_indexed(&mut self, pattern: &str, kind: Option<AtomKind>, options: Option<MatchOptions>) -> JsValue {
+        let (cm, norm) = self.resolve_options(&options);
+        let max = max_results(&options);
+        let atom_kind: nucleo_matcher::pattern::AtomKind = kind.unwrap_or_default().into();
+        self.ensure_pattern(pattern, cm, norm, Some(atom_kind));
+        let pat = &self.cache.as_ref().unwrap().pattern;
+        let scored = score_all(pat, &self.haystacks, &mut self.matcher, max);
+        scored_to_indexed_js(&scored)
     }
 
     /// Match a pattern (with fzf-like syntax) and return match indices for highlighting.
