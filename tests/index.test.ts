@@ -411,4 +411,71 @@ describe('NucleoMatcher', () => {
       }).not.toThrow()
     })
   })
+
+  describe('maxResults option', () => {
+    let matcher: NucleoMatcher
+
+    beforeEach(() => {
+      matcher = new NucleoMatcher(FRUITS)
+    })
+
+    afterEach(() => {
+      matcher.free()
+    })
+
+    test('matchLiteral caps to top K in score-descending order', () => {
+      const k = 2
+      const capped = matcher.matchLiteral('ap', undefined, { maxResults: k }) as [string, number][]
+      expect(capped.length).toBe(k)
+      for (let i = 1; i < capped.length; i++) {
+        expect(capped[i - 1][1]).toBeGreaterThanOrEqual(capped[i][1])
+      }
+    })
+
+    test('matchLiteral top-K equals prefix of unbounded result', () => {
+      const full = matcher.matchLiteral('ap') as [string, number][]
+      const k = Math.min(2, full.length)
+      const capped = matcher.matchLiteral('ap', undefined, { maxResults: k }) as [string, number][]
+      const cappedScores = capped.map(([, s]) => s).sort((a, b) => b - a)
+      const fullTopScores = full.slice(0, k).map(([, s]) => s).sort((a, b) => b - a)
+      expect(cappedScores).toEqual(fullTopScores)
+    })
+
+    test('matchPattern caps to top K', () => {
+      const capped = matcher.matchPattern('ap', { maxResults: 1 }) as [string, number][]
+      expect(capped.length).toBe(1)
+    })
+
+    test('matchPatternIndices caps to top K', () => {
+      const capped = matcher.matchPatternIndices('ap', { maxResults: 2 }) as [string, number, number[]][]
+      expect(capped.length).toBe(2)
+      for (let i = 1; i < capped.length; i++) {
+        expect(capped[i - 1][1]).toBeGreaterThanOrEqual(capped[i][1])
+      }
+    })
+
+    test('matchLiteralIndices caps to top K', () => {
+      const capped = matcher.matchLiteralIndices('ap', undefined, { maxResults: 2 }) as [string, number, number[]][]
+      expect(capped.length).toBe(2)
+    })
+
+    test('maxResults: 0 returns empty array', () => {
+      const results = matcher.matchLiteral('ap', undefined, { maxResults: 0 }) as [string, number][]
+      expect(results).toEqual([])
+    })
+
+    test('maxResults greater than haystack returns full result', () => {
+      const full = matcher.matchLiteral('ap') as [string, number][]
+      const capped = matcher.matchLiteral('ap', undefined, { maxResults: 999 }) as [string, number][]
+      expect(capped.length).toBe(full.length)
+    })
+
+    test('empty pattern with maxResults returns first K items with score 0', () => {
+      const k = 3
+      const capped = matcher.matchPattern('', { maxResults: k }) as [string, number][]
+      expect(capped.length).toBe(k)
+      expect(capped.map(([item]) => item)).toEqual(FRUITS.slice(0, k))
+      expect(capped.every(([, s]) => s === 0)).toBe(true)
+    })
+  })
 })

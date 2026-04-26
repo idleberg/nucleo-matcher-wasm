@@ -1,3 +1,6 @@
+use std::cmp::Reverse;
+use std::collections::BinaryHeap;
+
 use nucleo_matcher::pattern::Pattern;
 use nucleo_matcher::{Config, Matcher, Utf32Str, Utf32String};
 use serde::{Deserialize, Serialize};
@@ -92,6 +95,8 @@ pub struct MatchOptions {
     pub case_matching: Option<CaseMatching>,
     /// Unicode normalization mode – overrides the constructor default for this call
     pub normalization: Option<Normalization>,
+    /// Cap the result set to the top N matches by score (skips marshaling the rest)
+    pub max_results: Option<u32>,
 }
 
 #[wasm_bindgen(typescript_custom_section)]
@@ -111,6 +116,14 @@ fn scored_to_js(items: &[String], scored: &[(usize, u32)]) -> JsValue {
     result.into()
 }
 
+struct PatternCache {
+    text: String,
+    case_matching: nucleo_matcher::pattern::CaseMatching,
+    normalization: nucleo_matcher::pattern::Normalization,
+    atom_kind: Option<nucleo_matcher::pattern::AtomKind>,
+    pattern: Pattern,
+}
+
 #[wasm_bindgen]
 pub struct NucleoMatcher {
     matcher: Matcher,
@@ -118,6 +131,7 @@ pub struct NucleoMatcher {
     haystacks: Vec<Utf32String>,
     case_matching: nucleo_matcher::pattern::CaseMatching,
     normalization: nucleo_matcher::pattern::Normalization,
+    cache: Option<PatternCache>,
 }
 
 #[wasm_bindgen]
@@ -143,6 +157,7 @@ impl NucleoMatcher {
             haystacks,
             case_matching: opts.case_matching.into(),
             normalization: opts.normalization.into(),
+            cache: None,
         }
     }
 
@@ -158,8 +173,10 @@ impl NucleoMatcher {
     #[wasm_bindgen(js_name = "matchPattern")]
     pub fn match_pattern(&mut self, pattern: &str, options: Option<MatchOptions>) -> JsValue {
         let (cm, norm) = self.resolve_options(&options);
-        let pat = Pattern::parse(pattern, cm, norm);
-        let scored = self.score_all(&pat);
+        let max = max_results(&options);
+        self.ensure_pattern(pattern, cm, norm, None);
+        let pat = &self.cache.as_ref().unwrap().pattern;
+        let scored = score_all(pat, &self.haystacks, &mut self.matcher, max);
         scored_to_js(&self.items, &scored)
     }
 
@@ -168,9 +185,11 @@ impl NucleoMatcher {
     #[wasm_bindgen(js_name = "matchLiteral")]
     pub fn match_literal(&mut self, pattern: &str, kind: Option<AtomKind>, options: Option<MatchOptions>) -> JsValue {
         let (cm, norm) = self.resolve_options(&options);
+        let max = max_results(&options);
         let atom_kind: nucleo_matcher::pattern::AtomKind = kind.unwrap_or_default().into();
-        let pat = Pattern::new(pattern, cm, norm, atom_kind);
-        let scored = self.score_all(&pat);
+        self.ensure_pattern(pattern, cm, norm, Some(atom_kind));
+        let pat = &self.cache.as_ref().unwrap().pattern;
+        let scored = score_all(pat, &self.haystacks, &mut self.matcher, max);
         scored_to_js(&self.items, &scored)
     }
 
@@ -179,17 +198,21 @@ impl NucleoMatcher {
     #[wasm_bindgen(js_name = "matchPatternIndices")]
     pub fn match_pattern_indices(&mut self, pattern: &str, options: Option<MatchOptions>) -> JsValue {
         let (cm, norm) = self.resolve_options(&options);
-        let pat = Pattern::parse(pattern, cm, norm);
-        self.match_with_indices(&pat)
+        let max = max_results(&options);
+        self.ensure_pattern(pattern, cm, norm, None);
+        let pat = &self.cache.as_ref().unwrap().pattern;
+        match_with_indices(pat, &self.items, &self.haystacks, &mut self.matcher, max)
     }
 
     /// Match a literal pattern and return match indices for highlighting.
     #[wasm_bindgen(js_name = "matchLiteralIndices")]
     pub fn match_literal_indices(&mut self, pattern: &str, kind: Option<AtomKind>, options: Option<MatchOptions>) -> JsValue {
         let (cm, norm) = self.resolve_options(&options);
+        let max = max_results(&options);
         let atom_kind: nucleo_matcher::pattern::AtomKind = kind.unwrap_or_default().into();
-        let pat = Pattern::new(pattern, cm, norm, atom_kind);
-        self.match_with_indices(&pat)
+        self.ensure_pattern(pattern, cm, norm, Some(atom_kind));
+        let pat = &self.cache.as_ref().unwrap().pattern;
+        match_with_indices(pat, &self.items, &self.haystacks, &mut self.matcher, max)
     }
 
     /// Score a single haystack string against a pattern (with fzf-like syntax).
@@ -228,47 +251,128 @@ impl NucleoMatcher {
         (cm, norm)
     }
 
-    fn score_all(&mut self, pat: &Pattern) -> Vec<(usize, u32)> {
-        if pat.atoms.is_empty() {
-            return (0..self.items.len()).map(|i| (i, 0)).collect();
-        }
-        let mut scored: Vec<(usize, u32)> = self
-            .haystacks
-            .iter()
-            .enumerate()
-            .filter_map(|(i, h)| pat.score(h.slice(..), &mut self.matcher).map(|s| (i, s)))
-            .collect();
-        scored.sort_unstable_by(|a, b| b.1.cmp(&a.1));
-        scored
-    }
-
-    fn match_with_indices(&mut self, pat: &Pattern) -> JsValue {
-        let mut scored: Vec<(usize, u32, Vec<u32>)> = Vec::new();
-        let mut indices = Vec::new();
-
-        for (i, haystack) in self.haystacks.iter().enumerate() {
-            indices.clear();
-            if let Some(score) = pat.indices(haystack.slice(..), &mut self.matcher, &mut indices) {
-                indices.sort_unstable();
-                indices.dedup();
-                scored.push((i, score, std::mem::take(&mut indices)));
+    fn ensure_pattern(
+        &mut self,
+        text: &str,
+        cm: nucleo_matcher::pattern::CaseMatching,
+        norm: nucleo_matcher::pattern::Normalization,
+        atom_kind: Option<nucleo_matcher::pattern::AtomKind>,
+    ) {
+        if let Some(c) = &self.cache {
+            if c.atom_kind == atom_kind
+                && c.case_matching == cm
+                && c.normalization == norm
+                && c.text == text
+            {
+                return;
             }
         }
-
-        scored.sort_by(|a, b| b.1.cmp(&a.1));
-
-        let result = js_sys::Array::new();
-        for (idx, score, idxs) in scored {
-            let triple = js_sys::Array::new();
-            triple.push(&JsValue::from_str(&self.items[idx]));
-            triple.push(&JsValue::from_f64(score as f64));
-            let js_indices = js_sys::Array::new();
-            for i in idxs {
-                js_indices.push(&JsValue::from_f64(i as f64));
+        let pattern = match atom_kind {
+            None => {
+                if let Some(c) = self.cache.as_mut() {
+                    if c.atom_kind.is_none() {
+                        c.pattern.reparse(text, cm, norm);
+                        c.text.clear();
+                        c.text.push_str(text);
+                        c.case_matching = cm;
+                        c.normalization = norm;
+                        return;
+                    }
+                }
+                Pattern::parse(text, cm, norm)
             }
-            triple.push(&js_indices);
-            result.push(&triple);
-        }
-        result.into()
+            Some(kind) => Pattern::new(text, cm, norm, kind),
+        };
+        self.cache = Some(PatternCache {
+            text: text.to_string(),
+            case_matching: cm,
+            normalization: norm,
+            atom_kind,
+            pattern,
+        });
     }
+}
+
+fn max_results(options: &Option<MatchOptions>) -> Option<usize> {
+    options.as_ref().and_then(|o| o.max_results).map(|n| n as usize)
+}
+
+fn score_all(
+    pat: &Pattern,
+    haystacks: &[Utf32String],
+    matcher: &mut Matcher,
+    max: Option<usize>,
+) -> Vec<(usize, u32)> {
+    if pat.atoms.is_empty() {
+        let n = max.map_or(haystacks.len(), |k| k.min(haystacks.len()));
+        return (0..n).map(|i| (i, 0)).collect();
+    }
+    match max {
+        Some(0) => Vec::new(),
+        Some(k) if k < haystacks.len() => {
+            let mut heap: BinaryHeap<Reverse<(u32, usize)>> = BinaryHeap::with_capacity(k + 1);
+            for (i, h) in haystacks.iter().enumerate() {
+                if let Some(score) = pat.score(h.slice(..), matcher) {
+                    if heap.len() < k {
+                        heap.push(Reverse((score, i)));
+                    } else if heap.peek().map_or(false, |&Reverse((s, _))| score > s) {
+                        heap.pop();
+                        heap.push(Reverse((score, i)));
+                    }
+                }
+            }
+            let mut scored: Vec<(usize, u32)> =
+                heap.into_iter().map(|Reverse((s, i))| (i, s)).collect();
+            scored.sort_unstable_by(|a, b| b.1.cmp(&a.1));
+            scored
+        }
+        _ => {
+            let mut scored: Vec<(usize, u32)> = haystacks
+                .iter()
+                .enumerate()
+                .filter_map(|(i, h)| pat.score(h.slice(..), matcher).map(|s| (i, s)))
+                .collect();
+            scored.sort_unstable_by(|a, b| b.1.cmp(&a.1));
+            scored
+        }
+    }
+}
+
+fn match_with_indices(
+    pat: &Pattern,
+    items: &[String],
+    haystacks: &[Utf32String],
+    matcher: &mut Matcher,
+    max: Option<usize>,
+) -> JsValue {
+    let mut scored: Vec<(usize, u32, Vec<u32>)> = Vec::new();
+    let mut indices = Vec::new();
+
+    for (i, haystack) in haystacks.iter().enumerate() {
+        indices.clear();
+        if let Some(score) = pat.indices(haystack.slice(..), matcher, &mut indices) {
+            indices.sort_unstable();
+            indices.dedup();
+            scored.push((i, score, std::mem::take(&mut indices)));
+        }
+    }
+
+    scored.sort_by(|a, b| b.1.cmp(&a.1));
+    if let Some(k) = max {
+        scored.truncate(k);
+    }
+
+    let result = js_sys::Array::new();
+    for (idx, score, idxs) in scored {
+        let triple = js_sys::Array::new();
+        triple.push(&JsValue::from_str(&items[idx]));
+        triple.push(&JsValue::from_f64(score as f64));
+        let js_indices = js_sys::Array::new();
+        for i in idxs {
+            js_indices.push(&JsValue::from_f64(i as f64));
+        }
+        triple.push(&js_indices);
+        result.push(&triple);
+    }
+    result.into()
 }
