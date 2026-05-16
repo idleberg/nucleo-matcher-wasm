@@ -1,3 +1,20 @@
 [tools]
 node = "24"
+lefthook = "latest"
 rust = "latest"
+
+[tasks.checks]
+description = "Run all checks (formatting, linting)"
+depends = ["format:check", "lint", "test"]
+
+[tasks.format]
+description = "Format Rust code"
+run = "cargo fmt"
+
+[tasks."format:check"]
+description = "Check Rust code formatting"
+run = "cargo fmt --check"
+
+[tasks.lint]
+description = "Lint Rust code with Clippy"
+run = "cargo clippy -- --deny warnings"
