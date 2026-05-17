@@ -239,7 +239,7 @@ Node.js ≥ 18 is required for running the playground scripts and publishing to 
 Build the WASM package targeting Node.js:
 
 ```sh
-wasm-pack build --target nodejs --out-dir dist
+mise run build
 ```
 
 ## License

@@ -3,6 +3,14 @@ node = "24"
 lefthook = "latest"
 rust = "latest"
 
+[tasks.build]
+description = "Build WASM"
+run = """
+wasm-pack build --no-pack --out-dir dist/esm --release
+
+wasm-pack build --no-pack --out-dir dist/cjs --target nodejs --release
+"""
+
 [tasks.checks]
 description = "Run all checks (formatting, linting)"
 depends = ["format:check", "lint", "test"]
