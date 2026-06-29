@@ -4,6 +4,10 @@
   "description": "Fast fuzzy finder, powered by nucleo-matcher compiled to WebAssembly",
   "author": "Jan T. Sott",
   "license": "MPL-2.0",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/idleberg/nucleo-matcher-wasm.git"
+	},
   "keywords": [
     "fuzzy matching",
     "fuzzy search",
