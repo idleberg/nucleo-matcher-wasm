@@ -13,7 +13,7 @@ wasm-pack build --no-pack --out-dir dist/cjs --target nodejs --release
 
 [tasks.checks]
 description = "Run all checks (formatting, linting)"
-depends = ["format:check", "lint", "test"]
+depends = ["format:check", "lint"]
 
 [tasks.format]
 description = "Format Rust code"
