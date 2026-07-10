@@ -401,7 +401,7 @@ fn score_all(
 			}
 			let mut scored: Vec<(usize, u32)> =
 				heap.into_iter().map(|Reverse((s, i))| (i, s)).collect();
-			scored.sort_unstable_by(|a, b| b.1.cmp(&a.1));
+			scored.sort_unstable_by(|a, b| b.1.cmp(&a.1).then(a.0.cmp(&b.0)));
 			scored
 		}
 		_ => {
@@ -410,7 +410,7 @@ fn score_all(
 				.enumerate()
 				.filter_map(|(i, h)| pat.score(h.slice(..), matcher).map(|s| (i, s)))
 				.collect();
-			scored.sort_unstable_by(|a, b| b.1.cmp(&a.1));
+			scored.sort_unstable_by(|a, b| b.1.cmp(&a.1).then(a.0.cmp(&b.0)));
 			scored
 		}
 	}
@@ -453,7 +453,7 @@ fn match_with_indices(
 					acc.push((i, score, std::mem::take(&mut indices)));
 				}
 			}
-			acc.sort_by(|a, b| b.1.cmp(&a.1));
+			acc.sort_unstable_by(|a, b| b.1.cmp(&a.1).then(a.0.cmp(&b.0)));
 			acc
 		}
 	};

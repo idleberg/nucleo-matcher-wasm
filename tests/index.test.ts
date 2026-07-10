@@ -479,6 +479,44 @@ describe('NucleoMatcher', () => {
     })
   })
 
+  describe('deterministic tie-break', () => {
+    test('orders tied scores by input index', () => {
+      const items = ['a/x', 'b/x', 'c/x']
+      const matcher = new NucleoMatcher(items)
+      const { indices, scores } = matcher.matchPatternIndexed('x') as { indices: Uint32Array; scores: Uint32Array }
+      expect(new Set(scores).size).toBe(1)
+      expect([...indices]).toEqual([0, 1, 2])
+      matcher.free()
+    })
+
+    test('matchPattern returns tied items in input order', () => {
+      const items = ['a/x', 'b/x', 'c/x']
+      const matcher = new NucleoMatcher(items)
+      const results = matcher.matchPattern('x') as [string, number][]
+      const resultItems = results.map(([item]) => item)
+      expect(resultItems).toEqual(['a/x', 'b/x', 'c/x'])
+      matcher.free()
+    })
+
+    test('matchLiteral returns tied items in input order', () => {
+      const items = ['a/x', 'b/x', 'c/x']
+      const matcher = new NucleoMatcher(items)
+      const results = matcher.matchLiteral('x') as [string, number][]
+      const resultItems = results.map(([item]) => item)
+      expect(resultItems).toEqual(['a/x', 'b/x', 'c/x'])
+      matcher.free()
+    })
+
+    test('matchPatternIndices returns tied items in input order', () => {
+      const items = ['a/x', 'b/x', 'c/x']
+      const matcher = new NucleoMatcher(items)
+      const results = matcher.matchPatternIndices('x') as [string, number, number[]][]
+      const resultItems = results.map(([item]) => item)
+      expect(resultItems).toEqual(['a/x', 'b/x', 'c/x'])
+      matcher.free()
+    })
+  })
+
   describe('indexed match methods', () => {
     let matcher: NucleoMatcher
 
