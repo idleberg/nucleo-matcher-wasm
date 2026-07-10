@@ -1,6 +1,6 @@
 [tools]
 node = "24"
-lefthook = "latest"
+lefthook = { version = "latest", postinstall = "lefthook install" }
 rust = "latest"
 
 [tasks.build]
