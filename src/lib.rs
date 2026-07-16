@@ -92,10 +92,13 @@ pub struct MatcherOptions {
 #[serde(rename_all = "camelCase")]
 pub struct MatchOptions {
 	/// Case sensitivity mode – overrides the constructor default for this call
+	#[tsify(optional)]
 	pub case_matching: Option<CaseMatching>,
 	/// Unicode normalization mode – overrides the constructor default for this call
+	#[tsify(optional)]
 	pub normalization: Option<Normalization>,
 	/// Cap the result set to the top N matches by score (skips marshaling the rest)
+	#[tsify(optional)]
 	pub max_results: Option<u32>,
 }
 
