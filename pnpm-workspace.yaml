@@ -1,2 +1,5 @@
+packages:
+  - benchmark
+
 allowBuilds:
   esbuild: false

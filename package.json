@@ -33,7 +33,7 @@
   ],
   "scripts": {
     "build": "node scripts/build.ts",
-    "bench": "cd benchmark && pnpm install && node index.ts",
+    "bench": "node benchmark/index.ts",
     "prepack": "npm run build",
     "test": "vitest run"
   },
