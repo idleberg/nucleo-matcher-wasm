@@ -1,5 +1,6 @@
 {
   "private": true,
+  "type": "module",
   "devDependencies": {
     "@types/fuzzaldrin": "^2.1.7",
     "@types/fuzzaldrin-plus": "^0.6.5",
