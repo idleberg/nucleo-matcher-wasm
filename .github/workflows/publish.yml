@@ -33,14 +33,21 @@ jobs:
         if: steps.cache-wasm-pack.outputs.cache-hit != 'true'
         run: cargo install wasm-pack
 
-      - name: Build WASM package
-        run: mise run build
+      - name: Install pnpm
+        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v5.0.0
 
       - name: Setup Node.js
         uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
         with:
           node-version: "latest"
           registry-url: "https://registry.npmjs.org"
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Build WASM package
+        run: mise run build
 
       - name: Publish to npm
         run: npm publish --access public
